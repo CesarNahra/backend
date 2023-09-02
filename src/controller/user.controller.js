@@ -1,5 +1,7 @@
 const { sign } = require('jsonwebtoken');
 const { User } = require('../models/User');
+const { update, verifyUser } = require('../services/user.services');
+const bcrypt = require('bcrypt')
 
 class UserController {
     async create(req, res) {
@@ -145,7 +147,7 @@ class UserController {
             const { userId } = req.params
             const { name } = req.body
             
-            const user = User.findByPk(userId)
+            const user = await User.findByPk(userId)
 
             if(!user) {
                 return res.status(404).send({
@@ -167,7 +169,7 @@ class UserController {
                 })
             }
 
-            await User.update({name}, {where: {userId}})
+            await update(userId, { name })
 
             return res.status(204).send()
 
@@ -189,29 +191,67 @@ class UserController {
                 }
             })
 
+            const userVerified = await verifyUser(user)
+            
+            if(!userVerified) {
+                return res.status(404).send({
+                    message: 'usuário não encontrado'
+                })
+            }
+
+            const match = bcrypt.compareSync(password, user.password)
+
+            if(!match) {
+                return res.status(401).send({
+                    message: 'senha inválida'
+                })
+            }
+
+            const payload = {
+                userId: user.userId,
+                name: user.name,
+                email: user.email
+            }
+
+            const token = sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+            return res.status(200).send({token})
+            
+        } catch (error) {
+            return res.status(400).send({
+                message: 'erro ao realizar o login do usuário',
+                cause: error.message,
+            })
+        }
+    }
+
+    async updatePassword(req, res) {
+        try {
+            const { userId } = req.params
+            const { password } = req.body
+
+            const user = await User.findByPk(userId)
+
             if(!user) {
                 return res.status(404).send({
                     message: 'usuário não encontrado'
                 })
             }
 
-            if(user.password === password) {
-                const payload = {
-                    name: user.name,
-                    email: user.email
-                }
-
-                const token = sign(payload, process.env.JWT_SECRET);
-                return res.status(200).send({token})
-            } else {
-                return res.status(400).send({
-                    message: 'senha inválida'
+            const match = bcrypt.compareSync(password, user.password)
+            
+            if(match) {
+                return res.status(400).json({
+                    error: 'a senha já está sendo usada'
                 })
             }
 
+            await update(userId, { password })
+
+            return res.status(204).send()
         } catch (error) {
             return res.status(400).send({
-                message: 'erro ao realizar o login do usuário',
+                message: 'erro ao realizar o update de senha do usuário',
                 cause: error.message,
             })
         }

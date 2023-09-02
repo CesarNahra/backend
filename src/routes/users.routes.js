@@ -1,4 +1,4 @@
-const {create, findAll, findOne, login, findAllAdm, remove, restore, update} = require('../controller/user.controller')
+const {create, findAll, findOne, login, findAllAdm, remove, restore, update, updatePassword} = require('../controller/user.controller')
 const {Router} = require('express')
 const {auth} = require('../middlewares/auth.middleware');
 const {logger} = require('../middlewares/logger.middleware');
@@ -14,6 +14,7 @@ class UserRouter{
         userRoutes.post('/users/:userId/restore', auth, restore)
         userRoutes.patch('/users/:userId', auth, update)
         userRoutes.post('/users/login', login)
+        userRoutes.patch('/users/:userId/password', auth, updatePassword)
         return userRoutes
     }
 }

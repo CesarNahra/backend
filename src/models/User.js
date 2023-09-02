@@ -22,7 +22,8 @@ const User = connection.define('user', {
         allowNull: false,
     },
 }, {underscored: true, paranoid: true, hooks: {
-    beforeCreate: encryptPassword
+    beforeCreate: encryptPassword,
+    beforeUpdate: encryptPassword
 }})
 
 Cart.belongsTo(User, {foreignKey: 'user_id'})
